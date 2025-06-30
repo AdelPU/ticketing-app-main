@@ -74,7 +74,7 @@ class DashboardModule {
       container.innerHTML = `
         <p style="text-align: center; color: #6b7280; padding: 2rem;">
           No tickets found. 
-          <a href="public/ticket-submission.html" style="color: #3b82f6;">Create your first ticket</a>
+          <a href="/ticket-submission.html" style="color: #3b82f6;">Create your first ticket</a>
         </p>
       `;
       return;

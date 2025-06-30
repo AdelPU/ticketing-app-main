@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!container) return;
     const recentTickets = tickets.slice(0, 5);
     if (recentTickets.length === 0) {
-      container.innerHTML = '<p>No tickets found. <a href="public/ticket-submission.html">Create your first ticket</a></p>';
+      container.innerHTML = '<p>No tickets found. <a href="/ticket-submission.html">Create your first ticket</a></p>';
       return;
     }
     container.innerHTML = recentTickets.map(ticket => `
@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <div class="no-tickets">
           <h3>No tickets found</h3>
           <p>Get started by creating your first support ticket.</p>
-          <a href="public/ticket-submission.html" class="btn btn-primary">Create New Ticket</a>
+          <a href="/ticket-submission.html" class="btn btn-primary">Create New Ticket</a>
         </div>
       `;
       return;
