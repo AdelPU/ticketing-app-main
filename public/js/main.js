@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let tickets = [];
   let bases = {};
   let categories = {};
-  let users = {}; // Add users lookup
+  let users = {};
 
   // ---- DOM REFS ----
   const loadingScreen = document.getElementById('loading-screen');
@@ -76,19 +76,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       ] = await Promise.all([
         supabaseClient.from('bases').select('id, name').order('name'),
         supabaseClient.from('ticket_cats').select('id, name').order('name'),
-        supabaseClient.from('his_users').select('id, email, full_name, role').order('full_name') // Changed from profiles to his_users
+        supabaseClient.from('his_users').select('id, email, full_name, role').order('full_name')
       ]);
-      
       bases = basesData ? Object.fromEntries(basesData.map(b => [b.id, b.name])) : {};
       categories = categoriesData ? Object.fromEntries(categoriesData.map(c => [c.id, c.name])) : {};
-      users = usersData ? Object.fromEntries(usersData.map(u => [u.id, u])) : {}; // Create users lookup
-      
-      
+      users = usersData ? Object.fromEntries(usersData.map(u => [u.id, u])) : {};
     } catch (err) {
       bases = {};
       categories = {};
       users = {};
-      
     }
   }
 
@@ -99,8 +95,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         .select('*')
         .order('created_at', { ascending: false });
       if (error && error.code !== '42P01') throw error;
-      
-      // Enrich tickets with user full names
       tickets = (ticketsData || []).map(ticket => ({
         ...ticket,
         assigned_to_name: ticket.assigned_to ? (users[ticket.assigned_to]?.full_name || `User ${ticket.assigned_to}`) : null
@@ -225,7 +219,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         ticket.title.toLowerCase().includes(searchTerm) ||
         ticket.description.toLowerCase().includes(searchTerm) ||
         ticket.submitter_name?.toLowerCase().includes(searchTerm) ||
-        ticket.assigned_to_name?.toLowerCase().includes(searchTerm) || // Include assigned user name in search
+        ticket.assigned_to_name?.toLowerCase().includes(searchTerm) ||
         (ticket.ticket_number && ticket.ticket_number.toLowerCase().includes(searchTerm));
       const matchesStatus = !statusFilter || ticket.status === statusFilter;
       const matchesPriority = !priorityFilter || ticket.priority === priorityFilter;
@@ -295,7 +289,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const baseName = bases[ticket.base_id] || 'Unknown';
     const categoryName = categories[ticket.category_id] || 'Unknown';
     const assignedToName = ticket.assigned_to_name || 'Unassigned';
-    
+
     modalBody.innerHTML = `
       <div class="ticket-detail-grid">
         <div class="detail-section">
@@ -399,23 +393,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function showAuthError(message) {
     setText('auth-error-message', message);
-    loadingScreen.style.display = 'none';
-    authError.style.display = 'flex';
-    dashboardContainer.style.display = 'none';
+    if (loadingScreen) loadingScreen.style.display = 'none';
+    if (authError) authError.style.display = 'flex';
+    if (dashboardContainer) dashboardContainer.style.display = 'none';
   }
 
   function showInitError(message) {
     setText('init-error-message', message);
-    loadingScreen.style.display = 'none';
-    initError.style.display = 'flex';
-    dashboardContainer.style.display = 'none';
+    if (loadingScreen) loadingScreen.style.display = 'none';
+    if (initError) initError.style.display = 'flex';
+    if (dashboardContainer) dashboardContainer.style.display = 'none';
   }
 
   function showDashboard() {
-    loadingScreen.style.display = 'none';
-    authError.style.display = 'none';
-    initError.style.display = 'none';
-    dashboardContainer.style.display = 'flex';
+    if (loadingScreen) loadingScreen.style.display = 'none';
+    if (authError) authError.style.display = 'none';
+    if (initError) initError.style.display = 'none';
+    if (dashboardContainer) dashboardContainer.style.display = 'flex';
   }
 
   function handleSignOut() {
