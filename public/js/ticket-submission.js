@@ -748,6 +748,30 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  async function sendEmail(data) {
+  try {
+    const response = await fetch("/send-email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || "Unknown error sending email.");
+    }
+
+    console.log("✅ Email sent successfully");
+  } catch (err) {
+    console.error("❌ Email sending failed:", err);
+    throw err;
+  }
+}
+
+
   // --- Ticket Submission ---
   async function handleTicketSubmission(e) {
     e.preventDefault();
