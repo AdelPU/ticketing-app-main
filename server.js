@@ -2,11 +2,21 @@ const express = require("express");
 const nodemailer = require("nodemailer");
 const cors = require("cors");
 const { createClient } = require("@supabase/supabase-js");
+const path = require("path"); // ✅ Needed to serve HTML
 
 require("dotenv").config();
+
 const app = express();
 app.use(express.json());
 app.use(cors());
+
+// ✅ Serve static files from the "public" directory
+app.use(express.static(path.join(__dirname, "public")));
+
+// ✅ Root route serves index.html
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -21,7 +31,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// send email
+// Send email endpoint
 app.post("/send-email", async (req, res) => {
   const { to, subject, html } = req.body;
 
@@ -40,10 +50,10 @@ app.post("/send-email", async (req, res) => {
   }
 });
 
+// Get user emails endpoint
 app.post("/get-user-emails", async (req, res) => {
   const { secretKey } = req.body;
 
-  // Replace with your actual secret stored securely (e.g., in env vars)
   const expectedKey = process.env.SECRET_KEY;
 
   if (secretKey !== expectedKey) {
@@ -59,7 +69,6 @@ app.post("/get-user-emails", async (req, res) => {
     }
 
     const emails = data.users.map((user) => user.email);
-
     return res.status(200).json({ emails });
   } catch (err) {
     console.error("Server error:", err);
@@ -67,7 +76,7 @@ app.post("/get-user-emails", async (req, res) => {
   }
 });
 
-// Start server
+// ✅ Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`📬 Server listening on port ${PORT}`);
