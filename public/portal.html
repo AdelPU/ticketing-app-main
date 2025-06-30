@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HIS Portal Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
+  
+  <!-- CSS Files -->
+  <link rel="stylesheet" href="css/base/variables.css">
+  <link rel="stylesheet" href="css/base/reset.css">
+  <link rel="stylesheet" href="css/base/utilities.css">
+  <link rel="stylesheet" href="css/components/buttons.css">
+  <link rel="stylesheet" href="css/components/forms.css">
+  <link rel="stylesheet" href="css/components/cards.css">
+  <link rel="stylesheet" href="css/components/tables.css">
+  <link rel="stylesheet" href="css/components/modals.css">
+  <link rel="stylesheet" href="css/components/navigation.css">
+  <link rel="stylesheet" href="css/components/toast-notifications.css">
+  <link rel="stylesheet" href="css/components/loading-states.css">
+  <link rel="stylesheet" href="css/components/search-filters.css">
+  <link rel="stylesheet" href="css/pages/portal.css">
+  
+  <style>
+    html,body{height:100%;margin:0;padding:0;overflow-x:hidden}
+    .portal-body,.dashboard-container,.dashboard-main{min-height:100vh;height:100%}
+    .dashboard-main{flex:1;display:flex;flex-direction:column}
+    .dashboard-content{flex:1;overflow-y:auto}
+    .modal{position:fixed;top:0;left:0;width:100vw;height:100vh;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);z-index:1000}
+    .modal-content{position:relative;margin:2rem;max-width:90vw;max-height:90vh}
+    .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem}
+    .section-title h2{font-size:1.875rem;font-weight:700;color:var(--text);margin:0 0 0.5rem 0}
+    .section-title p{color:var(--text-muted);margin:0}
+    .section-actions{display:flex;align-items:center;gap:1rem;flex-wrap:wrap}
+    .analytics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:2rem}
+    .coming-soon{text-align:center;padding:4rem 2rem;font-size:1.125rem;color:var(--text-muted)}
+
+    /* Screenshot Display Styles */
+    .screenshot-section {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border-light);
+    }
+
+    .screenshot-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .screenshot-image {
+      max-width: 100%;
+      max-height: 400px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: var(--transition);
+      object-fit: contain;
+      background: var(--surface-hover);
+    }
+
+    .screenshot-image:hover {
+      box-shadow: var(--shadow-lg);
+      transform: scale(1.02);
+    }
+
+    .screenshot-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: var(--font-size-sm);
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+    }
+
+    .screenshot-filename {
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .screenshot-size {
+      color: var(--text-light);
+    }
+
+    .screenshot-hint {
+      font-style: italic;
+      color: var(--text-light);
+      font-size: var(--font-size-xs);
+      text-align: center;
+      margin-top: 0.5rem;
+    }
+
+    /* Full-screen screenshot modal */
+    .screenshot-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      cursor: pointer;
+    }
+
+    .screenshot-modal img {
+      max-width: 95vw;
+      max-height: 95vh;
+      object-fit: contain;
+      border-radius: var(--radius-sm);
+    }
+
+    .screenshot-modal-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      padding: 0.75rem;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: var(--transition);
+      backdrop-filter: blur(4px);
+    }
+
+    .screenshot-modal-close:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .screenshot-modal-close svg {
+      width: 20px;
+      height: 20px;
+      stroke-width: 2;
+    }
+
+    @media(max-width:768px){
+      .section-header{flex-direction:column;align-items:stretch}
+      .section-actions{flex-direction:column;align-items:stretch}
+      .search-container{max-width:100%}
+      .filter-container{display:flex;gap:0.5rem}
+      .filter-select{flex:1}
+      .analytics-grid{grid-template-columns:1fr}
+      .modal{padding:1rem}
+      .modal-content{margin:0;max-width:100%;max-height:100%;width:100%;height:100%;border-radius:0}
+      .modal-body{max-height:calc(100vh - 120px)}
+      .screenshot-image{max-height:200px}
+    }
+  </style>
+</head>
+<body class="portal-body">
+  <!-- Loading/Error Screens -->
+  <div id="loading-screen" class="loading-screen">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <h2>Loading Dashboard...</h2>
+      <p>Verifying authentication and fetching your data</p>
+    </div>
+  </div>
+
+  <div id="auth-error" class="init-error" style="display:none">
+    <div class="error-content">
+      <h2>🔒 Authentication Required</h2>
+      <p id="auth-error-message">You need to be logged in to access the HIS Portal.</p>
+      <div>
+        <button class="login-btn" onclick="redirectToLogin()">Go to Login</button>
+        <button class="retry-btn" onclick="retryAuthentication()">Retry</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="init-error" class="init-error" style="display:none">
+    <div class="error-content">
+      <h2>⚠️ System Error</h2>
+      <p id="init-error-message">Failed to initialize the portal. Please try refreshing the page.</p>
+      <div>
+        <button class="retry-btn" onclick="location.reload()">Refresh Page</button>
+        <button class="login-btn" onclick="redirectToLogin()">Back to Login</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Dashboard -->
+  <div class="dashboard-container" style="display:none" id="dashboard-container">
+    <!-- Sidebar -->
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/>
+          </svg>
+          <span class="logo-text">HIS Portal</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <h3 class="nav-section-title">Main</h3>
+          <ul class="nav-list">
+            <li class="nav-item">
+              <a href="#dashboard" class="nav-link active" data-section="dashboard">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="15" x2="15" y2="15"/>
+                </svg>Dashboard
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="#tickets" class="nav-link" data-section="tickets">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>All Tickets
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="#analytics" class="nav-link" data-section="analytics">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+                </svg>Analytics
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <div class="nav-section">
+          <h3 class="nav-section-title">Management</h3>
+          <ul class="nav-list">
+            <li class="nav-item">
+              <a href="create-user.html" class="nav-link external-link">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>
+                </svg>Create User
+              </a>
+            </li>
+          </ul>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-profile">
+          <div class="user-avatar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
+          </div>
+          <div class="user-info">
+            <span class="user-name" id="user-name">Loading...</span>
+            <span class="user-role" id="user-role">User</span>
+          </div>
+        </div>
+        <button class="logout-btn" onclick="handleLogout()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>Logout
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="dashboard-main">
+      <!-- Header -->
+      <header class="dashboard-header">
+        <div class="header-left">
+          <button class="mobile-menu-btn" id="mobile-menu-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+          <div class="breadcrumb">
+            <h1 id="page-title">Dashboard</h1>
+            <p id="page-subtitle">Overview of all tickets and system metrics</p>
+          </div>
+        </div>
+        <div class="header-right">
+          <button class="refresh-btn" onclick="refreshDashboard()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <polyline points="23,4 23,10 17,10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+            </svg><span>Refresh</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Dashboard Content -->
+      <div class="dashboard-content">
+        <!-- Dashboard Section -->
+        <section id="dashboard-section" class="content-section active">
+          <!-- Quick Stats -->
+          <div class="stats-overview">
+            <div class="stat-card">
+              <div class="stat-header">
+                <h3>Total Tickets</h3>
+                <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/>
+                </svg>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number" id="total-tickets">0</div>
+                <div class="stat-change positive">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <!-- <polyline points="22,12 18,8 14,12"/><path d="M16 8v13a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V8"/> -->
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-header">
+                <h3>Open Tickets</h3>
+                <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+                </svg>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number" id="open-tickets">0</div>
+                <div class="stat-change negative">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <!-- <polyline points="22,12 18,16 14,12"/><path d="M16 16v-13a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v13"/> -->
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-header">
+                <h3>Resolved Today</h3>
+                <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/>
+                </svg>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number" id="resolved-today">0</div>
+                <div class="stat-change positive">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <!-- <polyline points="22,12 18,8 14,12"/><path d="M16 8v13a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V8"/> -->
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-header">
+                <h3>Avg Resolution Time</h3>
+                <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <!-- <circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/> -->
+                </svg>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number" id="avg-resolution">0h</div>
+                <div class="stat-change positive">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <!-- <polyline points="22,12 18,8 14,12"/><path d="M16 8v13a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V8"/> -->
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dashboard Grid -->
+          <div class="dashboard-grid">
+            <div class="dashboard-card">
+              <div class="card-header">
+                <h3>Recent Tickets</h3>
+                <a href="#tickets" class="card-action-link" data-section="tickets">View All</a>
+              </div>
+              <div class="card-content">
+                <div class="recent-tickets" id="recent-tickets">
+                  <p>Loading recent tickets...</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="dashboard-card">
+              <div class="card-header">
+                <h3>Status Distribution</h3>
+                <button class="card-action-btn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/>
+                  </svg>
+                </button>
+              </div>
+              <div class="card-content">
+                <div id="status-stats" class="status-stats">
+                  <p>Loading status distribution...</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="dashboard-card">
+              <div class="card-header">
+                <h3>Team Performance</h3>
+                <button class="card-action-btn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/>
+                  </svg>
+                </button>
+              </div>
+              <div class="card-content">
+                <div class="team-performance">
+                  <table id="team-stats">
+                    <thead>
+                      <tr><th>Team</th><th>Total</th><th>Open</th><th>Completion Rate</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr><td colspan="4">Loading team data...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Tickets Section -->
+        <section id="tickets-section" class="content-section">
+          <div class="section-header">
+            <div class="section-title">
+              <h2>All Tickets</h2>
+              <p>Manage and track all support tickets</p>
+            </div>
+            <div class="section-actions">
+              <div class="search-container">
+                <div class="search-wrapper">
+                  <input type="text" id="ticket-search" class="search-input" placeholder="Search tickets...">
+                  <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="filter-container">
+                <select id="status-filter" class="filter-select">
+                  <option value="">All Status</option>
+                  <option value="Open">Open</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Resolved">Resolved</option>
+                  <option value="Closed">Closed</option>
+                </select>
+                <select id="priority-filter" class="filter-select">
+                  <option value="">All Priority</option>
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                </select>
+              </div>
+              <div class="view-controls">
+                <div class="view-toggle">
+                  <button class="view-btn active" data-view="table">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path d="M3 6h18M3 12h18m-9 6h9"/>
+                    </svg>Table
+                  </button>
+                  <button class="view-btn" data-view="cards">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <rect x="3" y="3" width="18" height="7"/><rect x="3" y="14" width="18" height="7"/>
+                    </svg>Cards
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Table View -->
+          <div id="table-view" class="tickets-container active">
+            <div class="table-container">
+              <table class="enhanced-table" id="tickets-table">
+                <thead>
+                  <tr>
+                    <th class="col-checkbox"><input type="checkbox" class="header-checkbox"></th>
+                    <th class="col-id sortable" data-sort="ticket_number">ID</th>
+                    <th class="col-title sortable" data-sort="title">Title</th>
+                    <th class="col-status sortable" data-sort="status">Status</th>
+                    <th class="col-priority sortable" data-sort="priority">Priority</th>
+                    <th class="col-assignee sortable" data-sort="assigned_to">Assignee</th>
+                    <th class="col-date sortable" data-sort="created_at">Created</th>
+                    <th class="col-actions">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td colspan="8">Loading tickets...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Cards View -->
+          <div id="cards-view" class="tickets-cards">
+            <div class="cards-grid" id="tickets-cards">
+              <p>Loading tickets...</p>
+            </div>
+          </div>
+
+          <!-- Pagination -->
+          <div class="table-pagination">
+            <div class="pagination-info">
+              Showing <span id="pagination-showing">1-10</span> of <span id="pagination-total">0</span> tickets
+            </div>
+            <div class="pagination-controls">
+              <button id="prev-page" class="pagination-btn" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <polyline points="15,18 9,12 15,6"/>
+                </svg>Previous
+              </button>
+              <div id="pagination-numbers" class="pagination-numbers"></div>
+              <button id="next-page" class="pagination-btn">
+                Next<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <polyline points="9,18 15,12 9,6"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Analytics Section -->
+        <section id="analytics-section" class="content-section">
+          <div class="section-header">
+            <div class="section-title">
+              <h2>Analytics & Reports</h2>
+              <p>Detailed insights and performance metrics</p>
+            </div>
+          </div>
+
+          <div class="analytics-grid">
+            <div class="dashboard-card">
+              <div class="card-header"><h3>Ticket Trends</h3></div>
+              <div class="card-content">
+                <p class="coming-soon">📊 Chart visualization coming soon</p>
+              </div>
+            </div>
+
+            <div class="dashboard-card">
+              <div class="card-header"><h3>Performance Metrics</h3></div>
+              <div class="card-content">
+                <p class="coming-soon">📈 Performance analytics coming soon</p>
+              </div>
+            </div>
+
+            <div class="dashboard-card">
+              <div class="card-header"><h3>Assignee Workload</h3></div>
+              <div class="card-content">
+                <div class="assignee-workload">
+                  <table id="assignee-stats">
+                    <thead>
+                      <tr><th>Assignee</th><th>Open</th><th>Closed</th><th>Total</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr><td colspan="4">Loading assignee data...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Screenshot Full-Screen Modal -->
+  <div id="screenshot-modal" class="screenshot-modal">
+    <button class="screenshot-modal-close" onclick="closeScreenshotModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <line x1="18" y1="6" x2="6" y2="18"/>
+        <line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+    <img id="screenshot-modal-image" src="" alt="Full-size screenshot" />
+  </div>
+
+  <!-- Ticket Modal (Enhanced with Screenshot Support) -->
+  <div id="ticket-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title">Ticket Details</h3>
+        <button class="modal-close" onclick="closeTicketModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeTicketModal()">Close</button>
+        <button type="button" class="btn btn-primary" onclick="editCurrentTicket()">Edit Ticket</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="edit-ticket-modal" class="modal">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h3 id="edit-modal-title">Edit Ticket</h3>
+        <button class="modal-close" onclick="closeEditModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="edit-ticket-form" class="edit-ticket-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Title</label>
+              <input type="text" id="edit-title" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Status</label>
+              <select id="edit-status" class="form-control">
+                <option value="Open">Open</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Resolved">Resolved</option>
+                <option value="Closed">Closed</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Priority</label>
+              <select id="edit-priority" class="form-control">
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Assigned To</label>
+              <select id="edit-assigned-to" class="form-control">
+                <option value="">Unassigned</option>
+                <!-- Options will be populated by JavaScript -->
+              </select>
+            </div>
+          </div>
+          <div class="form-group full-width">
+            <label class="form-label">Description</label>
+            <textarea id="edit-description" class="form-control" rows="4"></textarea>
+          </div>
+          <input type="hidden" id="edit-ticket-id">
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveTicketChanges()" id="save-ticket-btn">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // === PORTAL CONFIGURATION ===
+    // Global configuration
+    window.SUPABASE_CONFIG = {
+      url: 'https://rkdblbnmtzyrapfemswq.supabase.co',
+      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJrZGJsYm5tdHp5cmFwZmVtc3dxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA1ODQyNTgsImV4cCI6MjA2NjE2MDI1OH0.TY7Ml-S-knKMNQ-HKylGLbpXIu9wHqGAZDHHAq4rRJc'
+    };
+
+    // === SCREENSHOT MODAL FUNCTIONS ===
+    function showScreenshotModal(imageUrl) {
+      const modal = document.getElementById('screenshot-modal');
+      const modalImage = document.getElementById('screenshot-modal-image');
+      
+      if (modal && modalImage && imageUrl) {
+        modalImage.src = imageUrl;
+        modal.style.display = 'flex';
+      }
+    }
+
+    function closeScreenshotModal() {
+      const modal = document.getElementById('screenshot-modal');
+      if (modal) {
+        modal.style.display = 'none';
+      }
+    }
+
+    // === ENHANCED MODAL MANAGEMENT SYSTEM WITH SCREENSHOT SUPPORT ===
+    (function() {
+      'use strict';
+      
+      // Prevent multiple initializations
+      if (window.modalSystemInitialized) {
+        console.log('Modal system already initialized');
+        return;
+      }
+      window.modalSystemInitialized = true;
+
+      // Modal state management
+      const modalState = {
+        currentTicket: null,
+        appInitialized: false,
+        blockedCalls: []
+      };
+
+      // === UTILITY FUNCTIONS ===
+      function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+      }
+
+      function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      function sanitizeClass(text) {
+        return text ? text.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') : '';
+      }
+
+      function formatDateTime(dateString) {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+
+      // === ENHANCED MODAL FUNCTIONS WITH SCREENSHOT SUPPORT ===
+
+      function showTicketModal(ticket, lookupData) {
+        if (!ticket) {
+          console.error('No ticket provided to showTicketModal');
+          return;
+        }
+
+        modalState.currentTicket = ticket;
+        
+        const modal = document.getElementById('ticket-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalBody = document.getElementById('modal-body');
+
+        if (!modal || !modalTitle || !modalBody) {
+          console.error('Modal elements not found');
+          return;
+        }
+
+        // Hide edit modal if open
+        hideEditModal();
+
+        modalTitle.textContent = `Ticket ${ticket.ticket_number || ticket.id.slice(0, 8)}`;
+
+        // Get lookup data from window.app if available
+        const data = lookupData || (window.app?.services?.data?.data) || { bases: {}, categories: {} };
+        const baseName = data.bases?.[ticket.base_id] || 'Unknown';
+        const categoryName = data.categories?.[ticket.category_id] || 'Unknown';
+        const assignedToName = ticket.assigned_to_name || 'Unassigned';
+
+        // Build screenshot section HTML
+        let screenshotSection = '';
+        if (ticket.screenshot_url) {
+          screenshotSection = `
+            <div class="screenshot-section">
+              <h4>Screenshot</h4>
+              <div class="screenshot-container">
+                <img src="${ticket.screenshot_url}" 
+                     alt="Ticket screenshot" 
+                     class="screenshot-image" 
+                     onclick="showScreenshotModal('${ticket.screenshot_url}')" 
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                <div style="display:none; padding: 1rem; text-align: center; color: var(--text-muted); border: 2px dashed var(--border); border-radius: var(--radius-sm);">
+                  Screenshot could not be loaded
+                </div>
+                ${ticket.screenshot_filename || ticket.screenshot_size ? `
+                  <div class="screenshot-info">
+                    <span class="screenshot-filename">${ticket.screenshot_filename || 'Screenshot'}</span>
+                    ${ticket.screenshot_size ? `<span class="screenshot-size">${formatFileSize(ticket.screenshot_size)}</span>` : ''}
+                  </div>
+                ` : ''}
+                <p class="screenshot-hint">Click image to view full size</p>
+              </div>
+            </div>
+          `;
+        }
+
+        modalBody.innerHTML = `
+          <div class="ticket-detail-grid">
+            <div class="detail-section">
+              <h4>Basic Information</h4>
+              <div class="detail-item">
+                <label>Title</label>
+                <p>${escapeHtml(ticket.title || '')}</p>
+              </div>
+              <div class="detail-item">
+                <label>Description</label>
+                <p>${escapeHtml(ticket.description || '')}</p>
+              </div>
+              <div class="detail-item">
+                <label>Status</label>
+                <p><span class="status-badge status-${sanitizeClass(ticket.status)}">${escapeHtml(ticket.status || '')}</span></p>
+              </div>
+              <div class="detail-item">
+                <label>Priority</label>
+                <p><span class="priority-badge priority-${sanitizeClass(ticket.priority)}">${escapeHtml(ticket.priority || '')}</span></p>
+              </div>
+            </div>
+            <div class="detail-section">
+              <h4>Assignment & Location</h4>
+              <div class="detail-item">
+                <label>Base/Location</label>
+                <p>${escapeHtml(baseName)}</p>
+              </div>
+              <div class="detail-item">
+                <label>Category</label>
+                <p>${escapeHtml(categoryName)}</p>
+              </div>
+              <div class="detail-item">
+                <label>Assigned To</label>
+                <p>${escapeHtml(assignedToName)}</p>
+              </div>
+            </div>
+            <div class="detail-section">
+              <h4>Submitter Information</h4>
+              <div class="detail-item">
+                <label>Name</label>
+                <p>${escapeHtml(ticket.submitter_name || '')}</p>
+              </div>
+              <div class="detail-item">
+                <label>Email</label>
+                <p>${escapeHtml(ticket.submitter_email || '')}</p>
+              </div>
+            </div>
+            <div class="detail-section">
+              <h4>Timeline</h4>
+              <div class="detail-item">
+                <label>Created</label>
+                <p>${formatDateTime(ticket.created_at)}</p>
+              </div>
+              <div class="detail-item">
+                <label>Last Updated</label>
+                <p>${formatDateTime(ticket.updated_at)}</p>
+              </div>
+            </div>
+          </div>
+          ${screenshotSection}
+        `;
+
+        // Show modal
+        modal.style.display = 'flex';
+        modal.style.visibility = 'visible';
+        modal.offsetHeight; // Force reflow
+        modal.classList.add('active');
+
+        console.log('Ticket modal displayed with screenshot support');
+      }
+
+      function hideTicketModal() {
+        const modal = document.getElementById('ticket-modal');
+        if (modal) {
+          modal.classList.remove('active');
+          modal.style.display = 'none';
+          modal.style.visibility = 'hidden';
+          modalState.currentTicket = null;
+          console.log('Ticket modal hidden');
+        }
+      }
+
+      function showEditModal(ticket) {
+        if (!ticket) {
+          console.error('No ticket provided to showEditModal');
+          return;
+        }
+
+        // Hide ticket modal if open
+        hideTicketModal();
+
+        // Populate assignee dropdown first
+        populateAssigneeDropdown().then(() => {
+          const modal = document.getElementById('edit-ticket-modal');
+          const modalTitle = document.getElementById('edit-modal-title');
+          
+          if (!modal || !modalTitle) {
+            console.error('Edit modal elements not found');
+            return;
+          }
+
+          modalTitle.textContent = `Edit Ticket #${ticket.ticket_number || ticket.id.slice(0, 8)}`;
+
+          // Populate form fields
+          const fields = [
+            { id: 'edit-ticket-id', value: ticket.id },
+            { id: 'edit-title', value: ticket.title || '' },
+            { id: 'edit-description', value: ticket.description || '' },
+            { id: 'edit-status', value: ticket.status || 'Open' },
+            { id: 'edit-priority', value: ticket.priority || 'Medium' },
+            { id: 'edit-assigned-to', value: ticket.assigned_to || '' }
+          ];
+
+          fields.forEach(field => {
+            const element = document.getElementById(field.id);
+            if (element) {
+              element.value = field.value;
+            }
+          });
+
+          // Show modal
+          modal.style.display = 'flex';
+          modal.style.visibility = 'visible';
+          modal.offsetHeight; // Force reflow
+          modal.classList.add('active');
+
+          console.log('Edit modal displayed');
+        });
+      }
+
+      function hideEditModal() {
+        const modal = document.getElementById('edit-ticket-modal');
+        if (modal) {
+          modal.classList.remove('active');
+          modal.style.display = 'none';
+          modal.style.visibility = 'hidden';
+          
+          // Reset form
+          const form = document.getElementById('edit-ticket-form');
+          if (form) form.reset();
+          
+          console.log('Edit modal hidden');
+        }
+      }
+
+      async function populateAssigneeDropdown() {
+        try {
+          const dropdown = document.getElementById('edit-assigned-to');
+          if (!dropdown) return;
+
+          dropdown.innerHTML = '<option value="">Unassigned</option>';
+
+          let users = [];
+
+          // Try to get users from app service first
+          if (window.app?.services?.data) {
+            users = window.app.services.data.getUsers() || [];
+          } else if (window.SUPABASE_CONFIG && typeof supabase !== 'undefined') {
+            // Fallback to direct Supabase call
+            const supabaseClient = supabase.createClient(
+              window.SUPABASE_CONFIG.url, 
+              window.SUPABASE_CONFIG.anonKey
+            );
+            
+            const { data, error } = await supabaseClient
+              .from('his_users')
+              .select('id, email, full_name, role')
+              .order('full_name');
+
+            if (!error) users = data || [];
+          }
+
+          const assignableUsers = users.filter(user => {
+            const role = user.role?.toLowerCase();
+            return role && ['admin', 'technician', 'support', 'staff', 'manager'].includes(role);
+          });
+
+          assignableUsers.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.id;
+            option.textContent = user.full_name || user.email || `User ${user.id}`;
+            dropdown.appendChild(option);
+          });
+
+          console.log('Assignee dropdown populated with', assignableUsers.length, 'users');
+        } catch (error) {
+          console.error('Error populating assignee dropdown:', error);
+        }
+      }
+
+      // === SAFE GLOBAL FUNCTIONS ===
+
+      function safeShowTicketDetails(ticketId) {
+        if (!modalState.appInitialized) {
+          console.log('App not ready, queuing show ticket call');
+          modalState.blockedCalls.push({ type: 'show', ticketId });
+          return;
+        }
+
+        let ticket = null;
+
+        // Try multiple ways to get the ticket
+        if (window.app?.services?.data) {
+          ticket = window.app.services.data.getTicket(ticketId);
+        } else if (window.tickets) {
+          ticket = window.tickets.find(t => t.id === ticketId);
+        }
+
+        if (ticket) {
+          const lookupData = window.app?.services?.data?.data || null;
+          showTicketModal(ticket, lookupData);
+        } else {
+          console.error('Ticket not found:', ticketId);
+          if (window.app?.services?.ui) {
+            window.app.services.ui.showToast('Ticket not found', 'error');
+          }
+        }
+      }
+
+      function safeEditTicket(ticketId) {
+        if (!modalState.appInitialized) {
+          console.log('App not ready, queuing edit ticket call');
+          modalState.blockedCalls.push({ type: 'edit', ticketId });
+          return;
+        }
+
+        let ticket = null;
+
+        // Try multiple ways to get the ticket
+        if (window.app?.services?.data) {
+          ticket = window.app.services.data.getTicket(ticketId);
+        } else if (window.tickets) {
+          ticket = window.tickets.find(t => t.id === ticketId);
+        }
+
+        if (ticket) {
+          showEditModal(ticket);
+        } else {
+          console.error('Ticket not found for editing:', ticketId);
+          if (window.app?.services?.ui) {
+            window.app.services.ui.showToast('Ticket not found', 'error');
+          }
+        }
+      }
+
+      async function saveTicketChanges() {
+        try {
+          const ticketId = document.getElementById('edit-ticket-id')?.value;
+          if (!ticketId) {
+            console.error('No ticket ID found');
+            return;
+          }
+
+          // get recepient email
+          const ticketData = await window.app.services.data.getTicket(ticketId);
+          const recepientEmail = ticketData.submitter_email;
+
+          const updates = {
+            title: document.getElementById('edit-title')?.value?.trim() || '',
+            description: document.getElementById('edit-description')?.value?.trim() || '',
+            status: document.getElementById('edit-status')?.value || 'Open',
+            priority: document.getElementById('edit-priority')?.value || 'Medium',
+            assigned_to: document.getElementById('edit-assigned-to')?.value?.trim() || null
+          };
+
+          if (!updates.title) {
+            if (window.app?.services?.ui) {
+              window.app.services.ui.showToast('Title is required', 'error');
+            }
+            return;
+          }
+
+          const saveBtn = document.getElementById('save-ticket-btn');
+          if (saveBtn) {
+            saveBtn.textContent = 'Saving...';
+            saveBtn.disabled = true;
+          }
+
+          if (window.app?.services?.data) {
+            await window.app.services.data.updateTicket(ticketId, updates);
+            await window.app.services.data.updateTicket(ticketId, updates);
+
+          try {
+            await sendEmail({
+              to: recepientEmail,
+              subject: `Ticket #${ticketId} Updated`,
+              html: `
+                <h3>Ticket Updated</h3>
+                <p><strong>Title:</strong> ${updates.title}</p>
+                <p><strong>Status:</strong> ${updates.status}</p>
+                <p><strong>Priority:</strong> ${updates.priority}</p>
+                <p><strong>Description:</strong> ${updates.description}</p>
+              `,
+            });
+
+            window.app.services.ui.showToast("Notification email sent", "success");
+          } catch (err){
+            console.error(err);
+            window.app.services.ui.showToast("Failed to send email notification", "error");
+          }
+
+            hideEditModal();
+            
+            if (window.app.services.ui) {
+              window.app.services.ui.showToast('Ticket updated successfully', 'success');
+            }
+            
+            // Refresh the UI
+            if (window.app.services.dashboard) {
+              await window.app.services.dashboard.loadDashboardData();
+            }
+            if (window.app.services.tickets) {
+              window.app.services.tickets.renderTicketsTable();
+            }
+          } else {
+            throw new Error('Data service not available');
+          }
+        } catch (error) {
+          console.error('Error saving ticket changes:', error);
+          if (window.app?.services?.ui) {
+            window.app.services.ui.showToast('Failed to update ticket: ' + error.message, 'error');
+          }
+        } finally {
+          const saveBtn = document.getElementById('save-ticket-btn');
+          if (saveBtn) {
+            saveBtn.textContent = 'Save Changes';
+            saveBtn.disabled = false;
+          }
+        }
+      }
+
+      
+
+      // === EVENT HANDLERS ===
+
+      function setupEventHandlers() {
+        console.log('Setting up modal event handlers');
+
+        // Remove any existing handlers first
+        document.removeEventListener('click', handleDocumentClick);
+        document.removeEventListener('keydown', handleKeydown);
+
+        // Add fresh handlers
+        document.addEventListener('click', handleDocumentClick);
+        document.addEventListener('keydown', handleKeydown);
+
+        console.log('Modal event handlers set up');
+      }
+
+      function handleDocumentClick(e) {
+        // Handle screenshot modal clicks
+        if (e.target.id === 'screenshot-modal') {
+          closeScreenshotModal();
+          return;
+        }
+
+        // Handle modal close buttons
+        if (e.target.closest('#ticket-modal .modal-close') || 
+            e.target.closest('#ticket-modal .btn-secondary')) {
+          e.preventDefault();
+          e.stopPropagation();
+          hideTicketModal();
+          return;
+        }
+
+        if (e.target.closest('#edit-ticket-modal .modal-close') || 
+            e.target.closest('#edit-ticket-modal .btn-secondary')) {
+          e.preventDefault();
+          e.stopPropagation();
+          hideEditModal();
+          return;
+        }
+
+        // Handle background clicks
+        if (e.target.id === 'ticket-modal') {
+          hideTicketModal();
+          return;
+        }
+
+        if (e.target.id === 'edit-ticket-modal') {
+          hideEditModal();
+          return;
+        }
+
+        // Handle edit current ticket button
+        if (e.target.closest('#ticket-modal .btn-primary')) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (modalState.currentTicket) {
+            safeEditTicket(modalState.currentTicket.id);
+          }
+          return;
+        }
+
+        // Handle save changes button
+        if (e.target.closest('#save-ticket-btn')) {
+          e.preventDefault();
+          e.stopPropagation();
+          saveTicketChanges();
+          return;
+        }
+      }
+
+      function handleKeydown(e) {
+        if (e.key === 'Escape') {
+          const screenshotModal = document.getElementById('screenshot-modal');
+          const ticketModal = document.getElementById('ticket-modal');
+          const editModal = document.getElementById('edit-ticket-modal');
+          
+          if (screenshotModal && screenshotModal.style.display === 'flex') {
+            closeScreenshotModal();
+          } else if (editModal && editModal.style.display === 'flex') {
+            hideEditModal();
+          } else if (ticketModal && ticketModal.style.display === 'flex') {
+            hideTicketModal();
+          }
+        }
+      }
+
+      // === INITIALIZATION ===
+
+      function initializeModalSystem() {
+        console.log('Initializing modal system with screenshot support');
+
+        // Force hide all modals on load
+        const ticketModal = document.getElementById('ticket-modal');
+        const editModal = document.getElementById('edit-ticket-modal');
+        const screenshotModal = document.getElementById('screenshot-modal');
+        
+        [ticketModal, editModal, screenshotModal].forEach(modal => {
+          if (modal) {
+            modal.style.display = 'none';
+            modal.style.visibility = 'hidden';
+            modal.classList.remove('active');
+          }
+        });
+
+        // Setup event handlers
+        setupEventHandlers();
+
+        // Replace global functions
+        window.showTicketDetails = safeShowTicketDetails;
+        window.editTicket = safeEditTicket;
+        window.closeTicketModal = hideTicketModal;
+        window.editCurrentTicket = function() {
+          if (modalState.currentTicket) {
+            safeEditTicket(modalState.currentTicket.id);
+          }
+        };
+        window.closeEditModal = hideEditModal;
+        window.saveTicketChanges = saveTicketChanges;
+        window.refreshAssigneeDropdown = populateAssigneeDropdown;
+        window.showScreenshotModal = showScreenshotModal;
+        window.closeScreenshotModal = closeScreenshotModal;
+
+        console.log('Modal system initialized successfully');
+      }
+
+      // === APP INTEGRATION ===
+
+      window.markModalSystemReady = function() {
+        modalState.appInitialized = true;
+        console.log('Modal system marked as ready');
+        
+        // Process any queued calls
+        if (modalState.blockedCalls.length > 0) {
+          console.log('Processing', modalState.blockedCalls.length, 'queued modal calls');
+          modalState.blockedCalls.forEach(call => {
+            setTimeout(() => {
+              if (call.type === 'show') safeShowTicketDetails(call.ticketId);
+              if (call.type === 'edit') safeEditTicket(call.ticketId);
+            }, 100);
+          });
+          modalState.blockedCalls = [];
+        }
+        
+        console.log('Modal system fully ready');
+      };
+
+      // Initialize when DOM is ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeModalSystem);
+      } else {
+        initializeModalSystem();
+      }
+
+      // Fallback timeout to mark as ready
+      setTimeout(() => {
+        if (!modalState.appInitialized) {
+          console.log('Fallback: marking modal system as ready');
+          window.markModalSystemReady();
+        }
+      }, 3000);
+
+    })();
+
+    // === OTHER GLOBAL FUNCTIONS ===
+
+    window.handleLogout = function() { 
+      if (window.app?.services?.auth) {
+        window.app.services.auth.signOut();
+      } else if (window.authService) {
+        window.authService.signOut();
+      }
+    };
+
+    window.refreshDashboard = function() { 
+      if (window.app) {
+        window.app.refreshDashboard();
+      }
+    };
+
+    window.clearFilters = function() { 
+      if (window.app?.services?.tickets) {
+        window.app.services.tickets.clearFilters();
+      } else if (window.ticketRenderer) {
+        window.ticketRenderer.clearFilters();
+      }
+    };
+
+    window.redirectToLogin = function() { 
+      localStorage.clear(); 
+      sessionStorage.clear(); 
+      location.href = 'login.html'; 
+    };
+
+    window.retryAuthentication = function() { 
+      location.reload(); 
+    };
+
+    
+
+  </script>
+
+  <!-- Application Scripts -->
+  <script src="js/auth.js"></script>
+  <script src="js/dataService.js"></script>
+  <script src="js/uiComponents.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/ticketRenderer.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
