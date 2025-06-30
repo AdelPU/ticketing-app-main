@@ -995,7 +995,7 @@ class DataService {
 // send email
 window.sendEmail = async function ({ to, subject, html }) {
   try {
-    const res = await fetch("http://localhost:3000/send-email", {
+    const res = await fetch("/send-email", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ to, subject, html }),
@@ -1014,7 +1014,7 @@ window.sendEmail = async function ({ to, subject, html }) {
 // get emails
 window.getEByI = async function fetchUserEmails() {
   try {
-    const res = await fetch("http://localhost:3000/get-user-emails", {
+    const res = await fetch("/get-user-emails", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
